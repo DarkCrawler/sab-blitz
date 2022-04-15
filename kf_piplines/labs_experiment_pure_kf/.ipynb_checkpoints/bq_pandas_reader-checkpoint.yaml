@@ -1,0 +1,62 @@
+name: Bq pd df creater
+implementation:
+  container:
+    image: gcr.io/deeplearning-platform-release/tf2-cpu.2-3:latest
+    command:
+    - sh
+    - -c
+    - (PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location
+      'pandas' 'google-cloud-aiplatform' || PIP_DISABLE_PIP_VERSION_CHECK=1 python3
+      -m pip install --quiet --no-warn-script-location 'pandas' 'google-cloud-aiplatform'
+      --user) && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp)
+      printf "%s" "$0" > "$program_path"
+      python3 -u "$program_path" "$@"
+    - |
+      def bq_pd_df_creater():
+          from google.cloud import bigquery
+          bqclient = bigquery.Client()
+
+          train_set_query = """
+          SELECT
+          *
+          FROM `qwiklabs-gcp-00-59947c43422f.kfp_test.full_data` AS train_set WHERE MOD(ABS(FARM_FINGERPRINT(TO_JSON_STRING(train_set))), 10) IN (1, 2, 3, 4)
+          """
+
+          eval_set_query = """
+          SELECT
+          *
+          FROM `qwiklabs-gcp-00-59947c43422f.kfp_test.full_data` AS train_set WHERE MOD(ABS(FARM_FINGERPRINT(TO_JSON_STRING(train_set))), 10) IN (2)
+          """
+
+          train_set=(
+              bqclient.query(train_set_query)
+              .result()
+              .to_dataframe(
+                  # Optionally, explicitly request to use the BigQuery Storage API. As of
+                  # google-cloud-bigquery version 1.26.0 and above, the BigQuery Storage
+                  # API is used by default.
+                  create_bqstorage_client=True,)
+          )
+
+          eval_set=(
+              bqclient.query(eval_set_query)
+              .result()
+              .to_dataframe(
+                  # Optionally, explicitly request to use the BigQuery Storage API. As of
+                  # google-cloud-bigquery version 1.26.0 and above, the BigQuery Storage
+                  # API is used by default.
+                  create_bqstorage_client=True,)
+          )
+
+          return (train_set,eval_set)
+
+      import argparse
+      _parser = argparse.ArgumentParser(prog='Bq pd df creater', description='')
+      _parsed_args = vars(_parser.parse_args())
+
+      _outputs = bq_pd_df_creater(**_parsed_args)
+    args: []

@@ -1,0 +1,25 @@
+studySpec:
+  metrics:
+  - metricId: accuracy
+    goal: MAXIMIZE
+  parameters:
+  - parameterId: max_iter
+    discreteValueSpec:
+      values:
+      - 10
+      - 20
+  - parameterId: alpha
+    doubleValueSpec:
+      minValue: 1.0e-4
+      maxValue: 1.0e-1
+    scaleType: UNIT_LINEAR_SCALE
+  algorithm: ALGORITHM_UNSPECIFIED # results in Bayesian optimization
+trialJobSpec:
+  workerPoolSpecs:  
+  - machineSpec:
+      machineType: n1-standard-4
+    replicaCount: 1
+    containerSpec:
+      imageUri: gcr.io/qwiklabs-gcp-00-59947c43422f/exodus_kf_bq_trainer:latest
+      args:
+      - --hptune
